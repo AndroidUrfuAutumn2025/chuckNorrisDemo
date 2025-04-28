@@ -4,6 +4,7 @@ import android.app.Application
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
+import ru.urfu.chucknorrisdemo.di.datastoreModule
 import ru.urfu.chucknorrisdemo.di.networkModule
 import ru.urfu.chucknorrisdemo.di.rootModule
 
@@ -14,7 +15,7 @@ class ChuckApp: Application() {
         startKoin {
             androidLogger()
             androidContext(this@ChuckApp)
-            modules(rootModule, networkModule)
+            modules(rootModule, networkModule, datastoreModule)
         }
     }
 }
