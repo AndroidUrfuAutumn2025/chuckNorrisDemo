@@ -1,63 +1,79 @@
 package ru.urfu.chucknorrisdemo.presentation.screen
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.Button
-import androidx.compose.material3.Divider
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import org.koin.androidx.compose.koinViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import ru.urfu.chucknorrisdemo.presentation.viewModel.ChuckViewModel
+import ru.urfu.chucknorrisdemo.presentation.viewModel.UiState
 
 @Composable
-fun ChuckScreen() {
-    val viewModel = koinViewModel<ChuckViewModel>()
-    val viewState = viewModel.viewState
+fun ChuckScreen(vm: ChuckViewModel = viewModel()) {
+    val uiState by vm.uiState.collectAsState()
+    val categories by vm.categories.collectAsState()
 
-    var expanded by remember { mutableStateOf(false) }
+    var selectedCategory by remember { mutableStateOf<String?>(null) }
 
-    Column {
-        Button(onClick = { expanded = true }) {
-            Text(viewState.selectedCategory.ifEmpty { "Выбрать категорию" })
+    LaunchedEffect(Unit) {
+        vm.loadCategories()
+        vm.loadJoke(null)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text("Chuck Norris Jokes", style = MaterialTheme.typography.headlineSmall)
+        Spacer(Modifier.height(16.dp))
+
+        if (categories.isNotEmpty()) {
+            DropdownMenuBox(
+                categories = categories,
+                selectedCategory = selectedCategory,
+                onSelect = {
+                    selectedCategory = it
+                    vm.loadJoke(it)
+                }
+            )
         }
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            viewState.categories.forEach { 
-                Text(
-                    it,
-                    Modifier
-                        .clickable {
-                            viewModel.onCategoryClicked(it)
-                            expanded = false
-                        }
-                        .padding(8.dp)
-                )
-                Divider()
-            }
 
+        Spacer(Modifier.height(24.dp))
+
+        when (uiState) {
+            is UiState.Loading -> CircularProgressIndicator()
+            is UiState.Success -> Text((uiState as UiState.Success).joke)
+            is UiState.Error -> Text((uiState as UiState.Error).message, color = MaterialTheme.colorScheme.error)
         }
-        Text(text = viewState.joke)
     }
 }
 
-@Preview
 @Composable
-fun ChuckScreenPreview() {
-    ChuckScreen()
+fun DropdownMenuBox(
+    categories: List<String>,
+    selectedCategory: String?,
+    onSelect: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        Button(onClick = { expanded = true }) {
+            Text(selectedCategory ?: "Выберите категорию")
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            categories.forEach {
+                DropdownMenuItem(
+                    text = { Text(it) },
+                    onClick = {
+                        onSelect(it)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
 }
